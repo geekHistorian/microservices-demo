@@ -1,7 +1,9 @@
 import { useState } from "react";
 
-// Where the Order Service lives — in Kubernetes this is the external IP
-const ORDER_SERVICE_URL = "http://68.155.193.56";
+// In production (Azure SWA), calls go to /api/* which SWA proxies to AKS.
+// In local dev, set VITE_ORDER_SERVICE_URL in .env to point directly at AKS.
+// This avoids the HTTPS→HTTP mixed-content browser block.
+const ORDER_SERVICE_URL = import.meta.env.VITE_ORDER_SERVICE_URL || "";
 const products = [
   { id: "1", name: "Laptop Stand" },
   { id: "2", name: "Mechanical Keyboard" },
@@ -21,7 +23,7 @@ export default function App() {
     setOrder(null);
 
     try {
-      const response = await fetch(`${ORDER_SERVICE_URL}/order`, {
+      const response = await fetch(`${ORDER_SERVICE_URL}/api/order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, quantity }),
