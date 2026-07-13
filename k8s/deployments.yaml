@@ -1,0 +1,129 @@
+# ─── PRICING SERVICE ───────────────────────────────────────────────────────────
+# Deployment: tells Kubernetes to always keep 1 copy of this container running
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pricing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pricing-service
+  template:
+    metadata:
+      labels:
+        app: pricing-service
+    spec:
+      containers:
+        - name: pricing-service
+          image: saitdeomo.azurecr.io/pricing-service:latest
+          ports:
+            - containerPort: 3002
+          # Kubernetes pings /health — if it fails, the container gets replaced
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+# Service: gives the Pricing Service a stable name so other services can find it
+apiVersion: v1
+kind: Service
+metadata:
+  name: pricing-service
+spec:
+  selector:
+    app: pricing-service
+  ports:
+    - port: 3002
+      targetPort: 3002
+
+---
+# ─── PRODUCT SERVICE ───────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+        - name: product-service
+          image: saitdeomo.azurecr.io/product-service:latest
+          ports:
+            - containerPort: 3001
+          env:
+            # This is how Product Service finds Pricing Service in Kubernetes
+            # It uses the Service name — not an IP address
+            - name: PRICING_SERVICE_URL
+              value: "http://pricing-service:3002"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+spec:
+  selector:
+    app: product-service
+  ports:
+    - port: 3001
+      targetPort: 3001
+
+---
+# ─── ORDER SERVICE ─────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-service
+          image: saitdeomo.azurecr.io/order-service:latest
+          ports:
+            - containerPort: 5000
+          env:
+            # This is how Order Service finds Product Service in Kubernetes
+            - name: PRODUCT_SERVICE_URL
+              value: "http://product-service:3001"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+# LoadBalancer type gives the Order Service a public IP so the frontend can reach it
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: order-service
+  ports:
+    - port: 80
+      targetPort: 5000
