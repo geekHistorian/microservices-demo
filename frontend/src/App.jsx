@@ -22,11 +22,10 @@ export default function App() {
     setOrder(null);
 
     try {
-      // Wrap the target URL in a public CORS proxy to bypass mixed content blocks
-      const targetUrl = `${ORDER_SERVICE_URL}/order`;
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+      // Call the managed Azure Function which securely proxies to the AKS cluster
+      const targetUrl = `/api/order`;
 
-      const response = await fetch(proxyUrl, {
+      const response = await fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, quantity }),
