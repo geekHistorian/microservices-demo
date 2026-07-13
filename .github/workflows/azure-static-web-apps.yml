@@ -1,0 +1,27 @@
+name: Azure Static Web Apps CI/CD
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build_and_deploy_job:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: false
+      - name: Install and Build
+        run: |
+          cd frontend
+          rm -rf node_modules
+          npm install
+          npm run build
+      - name: Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GENTLE_PLANT_0FD7F100F }}
+          action: "upload"
+          app_location: "frontend"
+          output_location: "dist"
+          skip_app_build: true
