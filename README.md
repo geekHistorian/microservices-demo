@@ -1,6 +1,6 @@
 # Microservices Demo
 
-This is a group project for our Capstone course at SAIT. 
+This is a group project for our Capstone course at SAIT.  
 The idea was to build a small microservices architecture and deploy 
 it to Azure to show how independent services can talk to each other.
 
