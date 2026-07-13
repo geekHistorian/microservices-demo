@@ -1,9 +1,8 @@
 import { useState } from "react";
 
-// In production (Azure SWA), calls go to /api/* which SWA proxies to AKS.
-// In local dev, set VITE_ORDER_SERVICE_URL in .env to point directly at AKS.
-// This avoids the HTTPS→HTTP mixed-content browser block.
-const ORDER_SERVICE_URL = import.meta.env.VITE_ORDER_SERVICE_URL || "";
+// In production (Azure SWA) and local dev, we use a CORS proxy to bypass 
+// the HTTPS -> HTTP mixed-content block since the AKS cluster is plain HTTP.
+const ORDER_SERVICE_URL = import.meta.env.VITE_ORDER_SERVICE_URL || "http://68.155.193.56";
 const products = [
   { id: "1", name: "Laptop Stand" },
   { id: "2", name: "Mechanical Keyboard" },
@@ -23,7 +22,11 @@ export default function App() {
     setOrder(null);
 
     try {
-      const response = await fetch(`${ORDER_SERVICE_URL}/api/order`, {
+      // Wrap the target URL in a public CORS proxy to bypass mixed content blocks
+      const targetUrl = `${ORDER_SERVICE_URL}/order`;
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+
+      const response = await fetch(proxyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, quantity }),
