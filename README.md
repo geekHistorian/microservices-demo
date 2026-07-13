@@ -1,118 +1,56 @@
-# Microservices Demo — Setup Guide
+# Microservices Demo
 
-## Architecture
+This is a group project for our Capstone course at SAIT. 
+The idea was to build a small microservices architecture and deploy 
+it to Azure to show how independent services can talk to each other.
 
-```
-[React Frontend]
-      ↓ HTTP POST /order
-[Order Service — Python/Flask — port 5000]
-      ↓ HTTP GET /product/:id
-[Product Service — Node.js — port 3001]
-      ↓ HTTP GET /price/:id
-[Pricing Service — TypeScript — port 3002]
-```
+## What it does
 
----
+You place an order through the frontend and the request travels 
+through 3 separate backend services before you get a response back.
 
-## Step 1 — Create an Azure Container Registry (ACR)
+Frontend (React) -> Order Service -> Product Service -> Pricing Service
 
-In Azure Portal, create a Container Registry. Call it something like `saitdemo`.
-Your registry address will be: `saitdemo.azurecr.io`
+Each service is its own codebase, its own container, running independently.
 
-Login to it:
-```bash
-az acr login --name saitdemo
-```
+## Tech stack
 
----
+- Order Service: Python / Flask
+- Product Service: Node.js / Express
+- Pricing Service: TypeScript / Express
+- Frontend: React + Vite
+- Containers: Docker
+- Image storage: Azure Container Registry
+- Orchestration: Azure Kubernetes Service (AKS)
+- Frontend hosting: Azure Static Web Apps
 
-## Step 2 — Build and push all three images
+## How to run locally
 
-Replace `saitdemo` with your actual ACR name.
+You need Docker Desktop and Node.js installed.
 
 ```bash
-# Pricing Service
-cd pricing-service
-docker build -t saitdemo.azurecr.io/pricing-service:latest .
-docker push saitdemo.azurecr.io/pricing-service:latest
-
-# Product Service
-cd ../product-service
-docker build -t saitdemo.azurecr.io/product-service:latest .
-docker push saitdemo.azurecr.io/product-service:latest
-
-# Order Service
-cd ../order-service
-docker build -t saitdemo.azurecr.io/order-service:latest .
-docker push saitdemo.azurecr.io/order-service:latest
-```
-
----
-
-## Step 3 — Update the YAML file
-
-Open `k8s/deployments.yaml` and replace every `YOUR_ACR_NAME` with `saitdemo` (or whatever you named it).
-
----
-
-## Step 4 — Create AKS cluster and deploy
-
-```bash
-# Create the cluster (only do this once)
-az aks create --resource-group myResourceGroup --name sait-cluster --node-count 1 --generate-ssh-keys --attach-acr saitdemo
-
-# Connect kubectl to your cluster
-az aks get-credentials --resource-group myResourceGroup --name sait-cluster
-
-# Deploy everything
+# start the backend services
 kubectl apply -f k8s/deployments.yaml
-```
 
----
-
-## Step 5 — Get the Order Service public IP
-
-```bash
-kubectl get services
-```
-
-Wait until `order-service` shows an EXTERNAL-IP (takes ~2 minutes).
-Copy that IP — that's what your frontend points to.
-
----
-
-## Step 6 — Run the frontend
-
-```bash
+# run the frontend
 cd frontend
-# Set the Order Service IP
-echo "VITE_ORDER_SERVICE_URL=http://<EXTERNAL-IP>" > .env
 npm install
 npm run dev
 ```
 
----
+Then open http://localhost:5173
 
-## Demo Commands (for your presentation)
+## Live demo
 
-```bash
-# Show all running pods
-kubectl get pods
+Frontend: https://gentle-plant-0fd7f100f.7.azurestaticapps.net
 
-# Show all services (stable names)
-kubectl get services
+Backend runs on AKS at http://68.155.193.56
 
-# Watch logs live from each service (open 3 terminals)
-kubectl logs -f deployment/order-service
-kubectl logs -f deployment/product-service
-kubectl logs -f deployment/pricing-service
+## Notes
 
-# Kill a pod — watch Kubernetes restart it automatically
-kubectl delete pod <pod-name>
+The services find each other using Kubernetes Service names, not IP 
+addresses. So when Order Service needs to call Product Service it just 
+calls "product-service" and Kubernetes handles the routing.
 
-# Scale Order Service to 3 copies
-kubectl scale deployment order-service --replicas=3
-
-# Scale back down
-kubectl scale deployment order-service --replicas=1
-```
+Each service has a /health endpoint that Kubernetes pings to make sure 
+its still running. If it goes down it gets restarted automatically.
