@@ -1,10 +1,6 @@
 {
   "routes": [
     {
-      "route": "/api/*",
-      "rewrite": "http://68.155.193.56/{*}"
-    },
-    {
       "route": "/*",
       "serve": "/index.html",
       "statusCode": 200
